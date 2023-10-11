@@ -1,58 +1,25 @@
 import styles from './space.module.css';
 import Draggable from 'react-draggable';
-import FormDialog from './FormDialog';
+import FormDialog from './components/FormDialog';
+import PopupForm from './components/PopupForm';
+import NavBar from './components/NavBar';
 // import CardDialog from './CardDialog';
-import axios from 'axios';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-
-
-function NavBar({ id }) {
-
-	const [sidebar, setSidebar] = useState(false);
-	id = id.toUpperCase()
-
-	function toggleSideBar() {
-		setSidebar(!sidebar);
-	}
-
-
-	const sidebarStyle = sidebar ? styles.sidebarPage : styles.sidebarPageHidden;
-	const burgerStyle = sidebar ? styles.burger : styles.burgerHidden;
-	const lineTopStyle = sidebar ? styles.lineTop : styles.line;
-	const lineBottomStyle = sidebar ? styles.lineBottom : styles.line;
-	return (
-		<>
-			<button className={burgerStyle} onClick={toggleSideBar}>
-				<div className={lineTopStyle}></div>
-				<div className={lineBottomStyle}></div>
-			</button>
-			<h1 className={styles.title}>{id}</h1>
-
-			<div className={sidebarStyle}>
-				<nav>
-					<ul className={styles.navbarPage}>
-						{id != 'CLASSES' ? <Link to='/space/classes' className={styles.link}>Classes</Link> : null}
-						{id != 'DORMLIFE' ? <Link to='/space/dormlife' className={styles.link}>Dorm Life</Link> : null}
-						{id != 'FAMILY' ? <Link to='/space/family' className={styles.link}>Family</Link> : null}
-						{id != 'SOCIAL' ? <Link to='/space/social' className={styles.link}>Social</Link> : null}
-						{id != 'JOBS' ? <Link to='/space/jobs' className={styles.link}>Jobs</Link> : null}
-						{id != 'OTHER' ? <Link to='/space/other' className={styles.link}>Other</Link> : null}
-						<Link to='/' className={styles.linkHome}>Home</Link>
-					</ul>
-
-				</nav>
-			</div>
-		</>
-	)
-}
+import { useParams } from 'react-router-dom';
+import { isMean } from './isMean';
 
 export default function Space() {
 
 	const [position, setPosition] = useState({ x: 0, y: 0 });
+	const [notes, setNotes] = useState<Array<Note>>([]);
+	const { id } = useParams();
+	const [reply, setReply] = useState('');
+	const [comments, setComments] = useState('');
+	const [open, setOpen] = useState(false)
+	const [dragging, setDragging] = useState(false)
 
 	useEffect(() => {
 		const getRandomPosition = (max) => {
@@ -65,42 +32,11 @@ export default function Space() {
 		setPosition({ x: randomX, y: randomY });
 	}, []);
 
-	/** Determines if a message is mean or not */
-	async function isMean(content: string) {
-		try {
-			const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-				model: "gpt-3.5-turbo",
-				messages: [
-					{ "role": "user", "content": `Is the following content bullying or mean? Account for passive aggressiveness & sarcasm, & any type of mean content. Answer with only either 'yes' or 'no', in lower case - no full stops: "${content}"` }
-				]
-			}, {
-				headers: {
-					'Authorization': `Bearer ${(import.meta.env.VITE_OPENAI_API_KEY as string)}`,
-					'Content-Type': 'application/json'
-				}
-			});
-
-			/** Process the response to get the answer */
-			const answer = response.data.choices[0].message.content.trim().toLowerCase();
-			// console.log(answer)
-			return answer === "yes";
-		} catch (error) {
-			console.error('Error calling the API:', error.response ? error.response.data : error);
-			return false;
-		}
-	}
-
 	interface Note {
 		topic: string;
 		note: string;
 		id: string;
 	}
-
-	const [notes, setNotes] = useState<Array<Note>>([]);
-	const { id } = useParams();
-
-	const [reply, setReply] = useState('');
-	const [comments, setComments] = useState('');
 
 	async function handleSubmit(event: React.FormEvent<HTMLFormElement>, topic: string, note: string) {
 		event.preventDefault();
@@ -124,8 +60,7 @@ export default function Space() {
 		}
 	}
 
-	const [open, setOpen] = useState(false)
-	const [dragging, setDragging] = useState(false)
+
 
 	const handleStart = () => {
 		setDragging(true);
@@ -146,12 +81,12 @@ export default function Space() {
 
 	const handleClose = async (event) => {
 		event.preventDefault();
-	
+
 		const replyBullyingDetected = await isMean(reply);
 		const commentsBullyingDetected = await isMean(comments);
 
 		console.log(replyBullyingDetected, commentsBullyingDetected);
-	
+
 		if (replyBullyingDetected || commentsBullyingDetected) {
 			toast.error('The content you entered in the reply or comments is considered bullying or mean. Please refrain from such content.');
 		} else {
@@ -160,7 +95,7 @@ export default function Space() {
 			setComments('');
 		}
 	};
-	
+
 
 	return (
 		<>
@@ -171,48 +106,28 @@ export default function Space() {
 					notes.map((card) => (
 						<div key={card.id} >
 							{
-							open ? (
-								<div className={styles.popup} onClick={handleClose}>
-									<div className={styles.popupContainer}>
-										<p className={styles.note}>{card.note}</p>
-										<div>
-											<p>Reply</p>
-											<textarea
-												className={styles.textarea}
-												name="Reply"
-												rows="6"
-												placeholder="Your Reply"
-												value={reply}
-												onChange={e => setReply(e.target.value)}
-												onClick={(event) => event.stopPropagation()}
-											/>
-											<p>Comments</p>
-											<textarea
-												className={styles.textarea}
-												name="Comments"
-												rows="6"
-												placeholder="Comments"
-												value={comments}
-												onChange={e => setComments(e.target.value)}
-												onClick={(event) => event.stopPropagation()}
-											/>
-											{/* Modify this button: */}
-											<button onClick={() => handleSubmit(event, card.topic, card.note)} className={styles.niceButton}>Submit</button>
+								open ? (
+									<PopupForm
+										card={card}
+										handleClose={handleClose}
+										handleSubmit={handleSubmit}
+										reply={reply}
+										setReply={setReply}
+										comments={comments}
+										setComments={setComments}
+									/>
+								) : (
+									<Draggable onDrag={handleStart} onStop={handleStop} defaultPosition={position}>
+										<div className={styles.notes} onClick={handleClickOpen}>
+											<p className={styles.topic}>{card.topic}</p>
 										</div>
-									</div>
-								</div>
-							) : (
-								<Draggable onDrag={handleStart} onStop={handleStop} defaultPosition={position}>
-									<div className={styles.notes} onClick={handleClickOpen}>
-										<p className={styles.topic}>{card.topic}</p>
-									</div>
-								</Draggable>
-							)
-						}
-						</div>
+									</Draggable>
+								)
+							}
+						</div >
 					))
 				}
-			</div>
+			</div >
 			<FormDialog handleSubmit={handleSubmit} />
 		</>
 	);

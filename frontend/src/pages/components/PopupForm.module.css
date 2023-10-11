@@ -1,0 +1,60 @@
+/******** Note pop up ********/
+.popup {
+	background-color: rgba(0, 0, 0, 0.5);
+	position: absolute;
+	width: 100vw;
+	height: auto;
+	min-height: 100vh;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 100000;
+}
+
+.popupContainer {
+	background-color: white;
+	width: 500px;
+	height: auto;
+	border-radius: 10px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	align-items: center;
+}
+.textContainer{
+	display: flex;
+	flex-direction: column;
+
+}
+.textarea {
+	/* Your textarea styles */
+	width: 400px;
+	padding: 10px;
+	border: 1px solid #ccc;
+	border-radius: 5px;
+	margin-bottom: 10px;
+	resize: vertical;
+	/* Allow vertical resizing of the textarea */
+}
+
+.note {
+	padding-top: 50px;
+	font-size: 40px;
+	color: black;
+
+}
+
+.niceButton {
+    background-color: #007BFF;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+	margin: 40px 0;
+}
+
+.niceButton:hover {
+    background-color: #0056b3;
+}
