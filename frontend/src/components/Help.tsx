@@ -5,7 +5,7 @@ export default function Help() {
         <div>
             <div id="contact">
                 <div className={styles.container}>
-                <h1 className={styles.title}>Talk to a Counseler</h1><br></br>
+                <h1 className={styles.title}>Talk to a Counselor</h1><br></br>
                     <div className={styles.row}>
                         <div className={styles.contactLeft}>
                             <p>Email: <i>therapist@gmail.com</i></p>
