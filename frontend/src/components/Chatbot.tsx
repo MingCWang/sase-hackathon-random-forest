@@ -5,17 +5,17 @@ import { BsPersonFill } from 'react-icons/bs';
 
 
 export default function Chatbot() {
-    const [messages, setMessages] = useState([{role: "assistant", content: "How would you like me to respond?"}]);
+    const [messages, setMessages] = useState([{role: "assistant", content: "How would you like me to respond? (e.g., friendly, professional, empathetic)"}]);
     const [userInput, setUserInput] = useState('');
     const [showBot, setShowBot] = useState(false);
+    const [interactionStep, setInteractionStep] = useState(0);
 
     const categories = {
-        0: "classes at university", 
-        1: "work on their social life at university", 
-        2: "applying to and finding internships and jobs from university", 
-        3: "possible roommate problems at university", 
-        4: "possible romantic or social relationship issues", 
-        5: "their situation", 
+        0: "Classesy", 
+        1: "Dorm Life", 
+        2: "Jobs/Internships", 
+        3: "Family", 
+        4: "Social", 
     }
 
     function getClosestCategory(userMessage) {
@@ -31,38 +31,54 @@ export default function Chatbot() {
                 closestCategoryKey = key;
             }
         }
-
+        console.log(categories[closestCategoryKey]);
         return categories[closestCategoryKey];
     }
 
     const sendToOpenAI = async (userMessage) => {
-        let payload;
-        if (messages.length === 1) {
+      let payload;
+      switch (interactionStep) {
+          case 0: // Priming the model
+          payload = {
+              model: "gpt-3.5-turbo",
+              messages: [
+                  ...messages, 
+                  {role: "user", content: userMessage},
+              ],
+              max_tokens: 150, // increase this to ensure complete output
+              temperature: 0.8
+          };
+          break;
+    
+  
+          case 1: // Getting the user's concern and suggesting a category
+            const categoriesList = Object.values(categories).join(", "); // Convert categories to a string list
             payload = {
                 model: "gpt-3.5-turbo",
                 messages: [
-                    ...messages, 
-                    {role: "user", content: userMessage},
-                    {role: "assistant", content: `You'd like me to respond in a ${userMessage} manner. What are you struggling with?`}
+                    ...messages,
+                    {role: "user", content: `Out of these categories: ${categoriesList}, which one most fits my problems: ${userMessage}?`}
                 ],
-                max_tokens: 100,
-                temperature: 0.8
+                max_tokens: 150,
+                temperature: 0.7
             };
-        } else if (messages.length === 3) {
-            const suggestedCategory = getClosestCategory(userMessage);
-            const assistantMessage = `Based on your input, I suggest you visit the TreeHouse "${suggestedCategory}". However, I'm here to help with any other concerns you have :)`;
-            setMessages(prevMessages => [...prevMessages, {role: "user", content: userMessage}, {role: "assistant", content: assistantMessage}]);
-            return; 
-        } else {
-            payload = {
-                model: "gpt-3.5-turbo",
-                messages: [
-                    ...messages, {role: "user", content: userMessage}
-                ],
-                max_tokens: 100,
-                temperature: 0.8
-            };
-        }
+            break;
+      
+          case 2: // Handling further interaction if any
+              payload = {
+                  model: "gpt-3.5-turbo",
+                  messages: [
+                      ...messages, {role: "user", content: userMessage}
+                  ],
+                  max_tokens: 50,
+                  temperature: 0.8
+              };
+              break;
+  
+          default:
+              console.error("Unexpected interaction step:", interactionStep);
+              return;
+      }
 
         const apiEndpoint = "https://api.openai.com/v1/chat/completions";
         const response = await fetch(apiEndpoint, {
@@ -76,22 +92,29 @@ export default function Chatbot() {
     
         const data = await response.json();
     
-        // Check if the response contains choices and a message content
         if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
-            const assistantMessage = data.choices[0].message.content;
-            setMessages(messages => [...messages, {role: "user", content: userMessage}, {role: "assistant", content: assistantMessage}]);
-        } else {
-            console.error("Unexpected response format from OpenAI API:", data);
-        }
+          let assistantMessage = data.choices[0].message.content;
+          if (interactionStep === 0) {
+              assistantMessage += " What are you concerned with?";
+              setInteractionStep(1); // Transition to the next step
+          } else if (interactionStep === 1) {
+              assistantMessage = `Based on your input, I suggest you visit the TreeHouse "${assistantMessage}". However, I'm here to help with any other concerns you have :)`;
+              setInteractionStep(2);
+          }
+          setMessages(messages => [...messages, {role: "user", content: userMessage}, {role: "assistant", content: assistantMessage}]);
+          } else {
+              console.error("Unexpected response format from OpenAI API:", data);
+          }
+      
+      
+      
     };
-    
 
         const handleUserSubmit = (e: { preventDefault: () => void; }) => {
             e.preventDefault();
             sendToOpenAI(userInput);
             setUserInput(''); 
     };
-
 
     return (
         <div className={styles.chatbotContainer}>
